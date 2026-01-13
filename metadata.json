@@ -1,0 +1,5 @@
+{
+  "name": "Rent A Guide Voucher System",
+  "description": "A professional management system for generating and tracking supplier work orders and vouchers, featuring sequential numbering starting from 8000 and dynamic service management.",
+  "requestFramePermissions": []
+}
