@@ -12,34 +12,14 @@ const VoucherPrintout: React.FC<VoucherPrintoutProps> = ({ voucher }) => {
       id="voucher-document"
       className="bg-white p-8 md:p-12 border border-slate-200 print-area max-w-[800px] mx-auto min-h-[1050px] flex flex-col shadow-sm"
     >
-      {/* Header */}
+      {/* Header with New Logo */}
       <div className="flex justify-between items-start mb-12 border-b-2 border-slate-900 pb-8">
-        <div className="flex items-center space-x-5">
-          {/* Professional Placeholder Logo */}
-          <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 shrink-0">
-            <svg 
-              width="36" 
-              height="36" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="white" 
-              strokeWidth="2.5" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-            >
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-              <circle cx="12" cy="10" r="3"></circle>
-              <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" opacity="0.3"></path>
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tighter italic leading-none">
-              RENT A GUIDE
-            </h1>
-            <p className="text-sm text-slate-500 font-medium uppercase tracking-[0.2em] mt-2">
-              Premium Touring Services
-            </p>
-          </div>
+        <div className="flex flex-col">
+          {/* Recreated Logo SVG */}
+          <svg width="280" height="70" viewBox="0 0 280 70" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-1">
+            <text x="0" y="45" fill="#23257E" style={{ font: 'bold 48px sans-serif', letterSpacing: '-1px' }}>Rent-a-Guide</text>
+            <text x="2" y="65" fill="#001D4A" style={{ font: '500 15.5px sans-serif', letterSpacing: '0.5px' }}>PROFESSIONAL GUIDE SERVICES</text>
+          </svg>
         </div>
         <div className="text-right">
           <h2 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Work Order / Voucher</h2>

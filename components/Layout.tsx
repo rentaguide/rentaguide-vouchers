@@ -13,11 +13,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) =
       {/* Sidebar - Hidden on print */}
       <aside className="no-print w-full md:w-64 bg-slate-900 text-white flex-shrink-0">
         <div className="p-6 md:fixed md:w-64 h-full flex flex-col">
-          <div className="flex items-center space-x-3 mb-10">
-            <div className="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-500/20">
-              <i className="fas fa-route text-xl"></i>
-            </div>
-            <h1 className="text-xl font-black tracking-tight">RENT A GUIDE</h1>
+          {/* Updated Sidebar Branding */}
+          <div className="flex flex-col mb-10">
+            <h1 className="text-2xl font-black tracking-tight leading-none text-white italic">
+              Rent-a-Guide
+            </h1>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+              Professional Guide Services
+            </p>
           </div>
           
           <nav className="space-y-2 flex-grow">
