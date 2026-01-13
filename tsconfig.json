@@ -18,5 +18,10 @@
     "jsx": "react-jsx"
   },
   "include": ["index.tsx", "App.tsx", "types.ts", "constants.ts", "services/**/*.ts", "components/**/*.tsx"],
-  "exclude": ["node_modules", "vite.config.ts", "tsconfig.node.json"]
+  "exclude": [
+    "node_modules",
+    "vite.config.ts",
+    "tsconfig.node.json",
+    "dist"
+  ]
 }
