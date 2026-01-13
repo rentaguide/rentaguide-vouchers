@@ -12,13 +12,34 @@ const VoucherPrintout: React.FC<VoucherPrintoutProps> = ({ voucher }) => {
       id="voucher-document"
       className="bg-white p-8 md:p-12 border border-slate-200 print-area max-w-[800px] mx-auto min-h-[1050px] flex flex-col shadow-sm"
     >
-      {/* Header with New Logo */}
+      {/* Header with Adjusted Logo */}
       <div className="flex justify-between items-start mb-12 border-b-2 border-slate-900 pb-8">
         <div className="flex flex-col">
-          {/* Recreated Logo SVG */}
-          <svg width="280" height="70" viewBox="0 0 280 70" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-1">
-            <text x="0" y="45" fill="#23257E" style={{ font: 'bold 48px sans-serif', letterSpacing: '-1px' }}>Rent-a-Guide</text>
-            <text x="2" y="65" fill="#001D4A" style={{ font: '500 15.5px sans-serif', letterSpacing: '0.5px' }}>PROFESSIONAL GUIDE SERVICES</text>
+          {/* Recreated Logo SVG with safer viewBox and smaller display size */}
+          <svg width="240" height="60" viewBox="0 0 320 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-1">
+            <text 
+              x="0" 
+              y="45" 
+              fill="#23257E" 
+              style={{ 
+                font: 'bold 46px Arial, Helvetica, sans-serif', 
+                letterSpacing: '-1.5px',
+                fontWeight: 900
+              }}
+            >
+              Rent-a-Guide
+            </text>
+            <text 
+              x="2" 
+              y="68" 
+              fill="#001D4A" 
+              style={{ 
+                font: 'bold 15px Arial, Helvetica, sans-serif', 
+                letterSpacing: '0.2px' 
+              }}
+            >
+              PROFESSIONAL GUIDE SERVICES
+            </text>
           </svg>
         </div>
         <div className="text-right">
