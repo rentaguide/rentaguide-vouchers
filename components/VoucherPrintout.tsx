@@ -15,7 +15,6 @@ const VoucherPrintout: React.FC<VoucherPrintoutProps> = ({ voucher }) => {
       {/* Header with Adjusted Logo */}
       <div className="flex justify-between items-start mb-12 border-b-2 border-slate-900 pb-8">
         <div className="flex flex-col">
-          {/* Recreated Logo SVG with safer viewBox and smaller display size */}
           <svg width="240" height="60" viewBox="0 0 320 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-1">
             <text 
               x="0" 
@@ -61,6 +60,11 @@ const VoucherPrintout: React.FC<VoucherPrintoutProps> = ({ voucher }) => {
         </div>
 
         <div className="flex items-baseline border-b border-slate-200 pb-2">
+          <span className="text-sm font-bold text-slate-400 uppercase w-32 shrink-0">Visit Time:</span>
+          <span className="text-lg font-semibold text-slate-900">{voucher.visitTime || '--:--'}</span>
+        </div>
+
+        <div className="flex items-baseline border-b border-slate-200 pb-2">
           <span className="text-sm font-bold text-slate-400 uppercase w-32 shrink-0">Tour #:</span>
           <span className="text-lg font-semibold text-slate-900">{voucher.tourNumber}</span>
         </div>
@@ -70,7 +74,7 @@ const VoucherPrintout: React.FC<VoucherPrintoutProps> = ({ voucher }) => {
           <span className="text-lg font-semibold text-slate-900">{voucher.numberOfTravelers}</span>
         </div>
 
-        <div className="flex items-baseline border-b border-slate-200 pb-2">
+        <div className="col-span-2 flex items-baseline border-b border-slate-200 pb-2">
           <span className="text-sm font-bold text-slate-400 uppercase w-32 shrink-0">Service:</span>
           <span className="text-lg font-semibold text-slate-900">{voucher.serviceType}</span>
         </div>
@@ -78,7 +82,7 @@ const VoucherPrintout: React.FC<VoucherPrintoutProps> = ({ voucher }) => {
         <div className="col-span-2 mt-4">
           <span className="text-sm font-bold text-slate-400 uppercase block mb-3">Service Description:</span>
           <div className="p-4 bg-slate-50 rounded-lg min-h-[150px] text-slate-800 leading-relaxed border border-slate-100 whitespace-pre-wrap">
-            {voucher.serviceDescription}
+            {voucher.serviceDescription || 'No detailed description provided.'}
           </div>
         </div>
 

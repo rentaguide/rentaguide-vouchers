@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Voucher } from '../types';
+import { ISRAEL_LOCATIONS } from '../constants';
 
 interface VoucherFormProps {
   voucherNumber: number;
@@ -19,10 +20,14 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
   onSubmit, 
   onCancel 
 }) => {
+  // Merge system-saved suppliers with the static comprehensive Israel locations list
+  const allSuppliers = Array.from(new Set([...availableSuppliers, ...ISRAEL_LOCATIONS])).sort();
+
   const [formData, setFormData] = useState({
     to: initialData?.to || '',
     serviceType: initialData?.serviceType || '',
     dateOfService: initialData?.dateOfService || '',
+    visitTime: initialData?.visitTime || '',
     tourNumber: initialData?.tourNumber || '',
     numberOfTravelers: initialData?.numberOfTravelers || 1,
     serviceDescription: initialData?.serviceDescription || '',
@@ -32,35 +37,34 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
 
   const [customService, setCustomService] = useState('');
   const [isAddingNewService, setIsAddingNewService] = useState(false);
-  
-  const [customSupplier, setCustomSupplier] = useState('');
-  const [isAddingNewSupplier, setIsAddingNewSupplier] = useState(false);
 
   const isEditing = !!initialData;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalService = isAddingNewService ? customService : formData.serviceType;
-    const finalSupplier = isAddingNewSupplier ? customSupplier : formData.to;
+    const finalSupplier = formData.to.trim();
 
     if (!finalService) {
       alert("Please select or enter a service type");
       return;
     }
     if (!finalSupplier) {
-      alert("Please select or enter a supplier (TO)");
+      alert("Please enter a supplier (TO)");
       return;
     }
 
+    const isNewSupplier = !allSuppliers.includes(finalSupplier);
+
     onSubmit({
       ...formData,
+      to: finalSupplier,
       serviceType: finalService,
-      to: finalSupplier
-    }, isAddingNewService, isAddingNewSupplier);
+    }, isAddingNewService, isNewSupplier);
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
         <h2 className="text-white font-bold text-lg">
           {isEditing ? `Edit Work Order / Voucher` : `New Work Order / Voucher`}
@@ -73,63 +77,52 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
       <form onSubmit={handleSubmit} className="p-8 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* TO (Supplier) Selection */}
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">TO (Supplier):</label>
-            {!isAddingNewSupplier ? (
-              <div className="flex gap-2">
-                <select
-                  required
-                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  value={formData.to}
-                  onChange={(e) => {
-                    if (e.target.value === 'NEW') {
-                      setIsAddingNewSupplier(true);
-                    } else {
-                      setFormData({ ...formData, to: e.target.value });
-                    }
-                  }}
-                >
-                  <option value="">Select Supplier</option>
-                  {availableSuppliers.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                  <option value="NEW" className="text-blue-600 font-bold">+ Add New Supplier...</option>
-                </select>
+          {/* TO (Supplier / Hotel / Site) */}
+          <div className="space-y-1 md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700">TO (Supplier / Hotel / Site):</label>
+            <div className="relative">
+              <input
+                required
+                list="suppliers-list"
+                type="text"
+                autoComplete="off"
+                placeholder="Type hotel name or site..."
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                value={formData.to}
+                onChange={(e) => setFormData({ ...formData, to: e.target.value })}
+              />
+              <datalist id="suppliers-list">
+                {allSuppliers.map(s => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+              <div className="absolute right-3 top-2.5 text-slate-300 pointer-events-none">
+                <i className="fas fa-search text-xs"></i>
               </div>
-            ) : (
-              <div className="flex gap-2">
-                <input
-                  required
-                  autoFocus
-                  type="text"
-                  placeholder="Enter new supplier name"
-                  className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={customSupplier}
-                  onChange={(e) => setCustomSupplier(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsAddingNewSupplier(false)}
-                  className="px-3 text-slate-400 hover:text-slate-600 border border-slate-200 rounded-lg"
-                  title="Select from existing"
-                >
-                  <i className="fas fa-list"></i>
-                </button>
-              </div>
-            )}
+            </div>
           </div>
 
-          {/* DATE OF SERVICE Field */}
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">DATE OF SERVICE:</label>
-            <input
-              required
-              type="date"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              value={formData.dateOfService}
-              onChange={(e) => setFormData({ ...formData, dateOfService: e.target.value })}
-            />
+          {/* DATE & TIME Split Row */}
+          <div className="grid grid-cols-2 gap-4 md:col-span-2">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">DATE OF SERVICE:</label>
+              <input
+                required
+                type="date"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                value={formData.dateOfService}
+                onChange={(e) => setFormData({ ...formData, dateOfService: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">VISIT TIME:</label>
+              <input
+                type="time"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                value={formData.visitTime}
+                onChange={(e) => setFormData({ ...formData, visitTime: e.target.value })}
+              />
+            </div>
           </div>
 
           {/* SERVICE Selection */}
@@ -218,17 +211,18 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
           </div>
         </div>
 
-        {/* SERVICE DESCRIPTION Field */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-slate-700">SERVICE DESCRIPTION:</label>
-          <textarea
-            required
-            rows={4}
-            placeholder="Describe the service in detail..."
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all"
-            value={formData.serviceDescription}
-            onChange={(e) => setFormData({ ...formData, serviceDescription: e.target.value })}
-          ></textarea>
+        {/* SERVICE DESCRIPTION - Optional */}
+        <div className="pt-4 border-t border-slate-100">
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">SERVICE DESCRIPTION (Optional):</label>
+            <textarea
+              rows={4}
+              placeholder="Describe the service in detail if needed..."
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all"
+              value={formData.serviceDescription}
+              onChange={(e) => setFormData({ ...formData, serviceDescription: e.target.value })}
+            ></textarea>
+          </div>
         </div>
 
         <div className="pt-6 border-t border-slate-100 flex justify-end space-x-4">

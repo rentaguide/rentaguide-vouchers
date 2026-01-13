@@ -5,6 +5,7 @@ export interface Voucher {
   to: string;
   serviceType: string;
   dateOfService: string;
+  visitTime: string;
   tourNumber: string;
   numberOfTravelers: number;
   serviceDescription: string;
