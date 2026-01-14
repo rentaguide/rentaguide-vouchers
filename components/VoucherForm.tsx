@@ -49,15 +49,6 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
     const finalService = isAddingNewService ? customService : formData.serviceType;
     const finalSupplier = formData.to.trim();
 
-    if (!finalService) {
-      alert("Please select or enter a service type");
-      return;
-    }
-    if (!finalSupplier) {
-      alert("Please enter a supplier (TO)");
-      return;
-    }
-
     const isNewSupplier = !allSuppliers.includes(finalSupplier);
 
     onSubmit({
@@ -116,7 +107,6 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
             <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">TO (Supplier / Hotel / Site):</label>
             <div className="relative">
               <input
-                required
                 list="suppliers-list"
                 type="text"
                 autoComplete="off"
@@ -141,7 +131,6 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
             <div className="space-y-1">
               <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">DATE OF SERVICE:</label>
               <input
-                required
                 type="date"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={formData.dateOfService}
@@ -165,7 +154,6 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
             {!isAddingNewService ? (
               <div className="flex gap-2">
                 <select
-                  required
                   className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-semibold"
                   value={formData.serviceType}
                   onChange={(e) => {
@@ -186,7 +174,6 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
             ) : (
               <div className="flex gap-2">
                 <input
-                  required
                   autoFocus
                   type="text"
                   placeholder="Enter new service name"
@@ -205,11 +192,10 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
             )}
           </div>
 
-          {/* TOUR NUMBER Field */}
+          {/* TOUR NUMBER Field renamed to ORDER NUMBER */}
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">TOUR NUMBER:</label>
+            <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">ORDER NUMBER:</label>
             <input
-              required
               type="text"
               placeholder="e.g. TLV-2024-001"
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
@@ -222,21 +208,19 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
           <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">NUMBER OF TRAVELERS:</label>
             <input
-              required
               type="number"
               min="1"
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               value={formData.numberOfTravelers}
-              onChange={(e) => setFormData({ ...formData, numberOfTravelers: parseInt(e.target.value) })}
+              onChange={(e) => setFormData({ ...formData, numberOfTravelers: parseInt(e.target.value) || 0 })}
             />
           </div>
 
-          {/* GUIDE NAME Field - With persistence memory */}
+          {/* GUIDE NAME Field */}
           <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">GUIDE NAME:</label>
             <div className="relative">
               <input
-                required
                 list="guides-list"
                 type="text"
                 autoComplete="off"

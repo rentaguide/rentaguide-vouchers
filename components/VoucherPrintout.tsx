@@ -51,12 +51,12 @@ const VoucherPrintout: React.FC<VoucherPrintoutProps> = ({ voucher }) => {
       <div className="grid grid-cols-2 gap-y-6 gap-x-12 flex-grow">
         <div className="col-span-2 flex items-baseline border-b-2 border-slate-200 pb-2">
           <span className="text-[14px] font-bold text-slate-800 uppercase w-32 shrink-0">TO:</span>
-          <span className="text-[12px] font-medium text-black uppercase">{voucher.to}</span>
+          <span className="text-[12px] font-medium text-black uppercase">{voucher.to || '---'}</span>
         </div>
 
         <div className="flex items-baseline border-b-2 border-slate-200 pb-2">
           <span className="text-[14px] font-bold text-slate-800 uppercase w-32 shrink-0">Date:</span>
-          <span className="text-[12px] font-medium text-black">{new Date(voucher.dateOfService).toLocaleDateString('en-GB')}</span>
+          <span className="text-[12px] font-medium text-black">{voucher.dateOfService ? new Date(voucher.dateOfService).toLocaleDateString('en-GB') : '---'}</span>
         </div>
 
         <div className="flex items-baseline border-b-2 border-slate-200 pb-2">
@@ -65,18 +65,18 @@ const VoucherPrintout: React.FC<VoucherPrintoutProps> = ({ voucher }) => {
         </div>
 
         <div className="flex items-baseline border-b-2 border-slate-200 pb-2">
-          <span className="text-[14px] font-bold text-slate-800 uppercase w-32 shrink-0">Tour #:</span>
-          <span className="text-[12px] font-medium text-black uppercase">{voucher.tourNumber}</span>
+          <span className="text-[14px] font-bold text-slate-800 uppercase w-32 shrink-0">Order #:</span>
+          <span className="text-[12px] font-medium text-black uppercase">{voucher.tourNumber || '---'}</span>
         </div>
 
         <div className="flex items-baseline border-b-2 border-slate-200 pb-2">
           <span className="text-[14px] font-bold text-slate-800 uppercase w-32 shrink-0">Pax:</span>
-          <span className="text-[12px] font-medium text-black">{voucher.numberOfTravelers}</span>
+          <span className="text-[12px] font-medium text-black">{voucher.numberOfTravelers || '0'}</span>
         </div>
 
         <div className="col-span-2 flex items-baseline border-b-2 border-slate-200 pb-2">
           <span className="text-[14px] font-bold text-slate-800 uppercase w-32 shrink-0">Service:</span>
-          <span className="text-[12px] font-medium text-black uppercase">{voucher.serviceType}</span>
+          <span className="text-[12px] font-medium text-black uppercase">{voucher.serviceType || '---'}</span>
         </div>
 
         <div className="col-span-2 mt-2">
@@ -88,7 +88,7 @@ const VoucherPrintout: React.FC<VoucherPrintoutProps> = ({ voucher }) => {
 
         <div className="col-span-2 flex items-baseline border-b-2 border-slate-200 pb-2 mt-4">
           <span className="text-[14px] font-bold text-slate-800 uppercase w-32 shrink-0">Guide:</span>
-          <span className="text-[12px] font-medium text-black uppercase">{voucher.guideName}</span>
+          <span className="text-[12px] font-medium text-black uppercase">{voucher.guideName || '---'}</span>
         </div>
       </div>
 
@@ -96,17 +96,33 @@ const VoucherPrintout: React.FC<VoucherPrintoutProps> = ({ voucher }) => {
       <div className="mt-8 pt-6">
         <div className="flex justify-between items-end mb-8">
           <div className="flex flex-col">
-            <span className="text-[10px] font-black text-slate-800 uppercase mb-16 tracking-widest">Authorized Signature</span>
+            {/* Hebrew inline note */}
+            <span
+              className="text-[10px] font-bold text-slate-800 text-right"
+              dir="rtl"
+            >
+              נא לציין את מספר השובר בחשבונית
+            </span>
+
+            <span className="text-[10px] font-black text-slate-800 uppercase mt-2 mb-8 tracking-widest">
+              Authorized Signature
+            </span>
+
             <div className="w-64 border-t-2 border-black"></div>
           </div>
+
           <div className="text-right italic text-slate-600 text-[10px] font-bold">
             Voucher ID: {voucher.id}
           </div>
         </div>
 
         <div className="bg-black text-white p-6 rounded-t-xl text-center">
-          <p className="text-xl font-bold">Please charge our account for the above service</p>
-          <p className="text-[10px] text-slate-300 mt-2 uppercase tracking-widest font-bold">Thank you for your cooperation</p>
+          <p className="text-xl font-bold">
+            Please charge our account for the above service
+          </p>
+          <p className="text-[10px] text-slate-300 mt-2 uppercase tracking-widest font-bold">
+            Thank you for your cooperation
+          </p>
         </div>
 
         {/* Company Contact Details */}

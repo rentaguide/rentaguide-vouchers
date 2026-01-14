@@ -51,7 +51,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const handleExportCSV = () => {
     if (filteredAndSortedVouchers.length === 0) return;
-    const headers = ["Voucher Number", "To", "Service Type", "Date", "Time", "Tour #", "Travelers", "Guide", "Created"];
+    const headers = ["Voucher Number", "To", "Service Type", "Date", "Time", "Order #", "Travelers", "Guide", "Created"];
     const rows = filteredAndSortedVouchers.map(v => {
       const escape = (val: any) => {
         const str = String(val);
