@@ -1,6 +1,6 @@
 
 import { AppState } from '../types';
-import { INITIAL_VOUCHER_NUMBER, DEFAULT_SERVICES, DEFAULT_SUPPLIERS, STORAGE_KEY } from '../constants';
+import { INITIAL_VOUCHER_NUMBER, DEFAULT_SERVICES, DEFAULT_SUPPLIERS, DEFAULT_GUIDES, STORAGE_KEY } from '../constants';
 
 export const loadState = (): AppState => {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -11,6 +11,7 @@ export const loadState = (): AppState => {
         ...parsed,
         suppliers: parsed.suppliers || DEFAULT_SUPPLIERS,
         services: parsed.services || DEFAULT_SERVICES,
+        guides: parsed.guides && parsed.guides.length > 0 ? parsed.guides : DEFAULT_GUIDES,
         vouchers: parsed.vouchers || [],
         nextVoucherNumber: parsed.nextVoucherNumber || INITIAL_VOUCHER_NUMBER,
         lastView: parsed.lastView || 'dashboard',
@@ -24,6 +25,7 @@ export const loadState = (): AppState => {
     vouchers: [],
     services: DEFAULT_SERVICES,
     suppliers: DEFAULT_SUPPLIERS,
+    guides: DEFAULT_GUIDES,
     nextVoucherNumber: INITIAL_VOUCHER_NUMBER,
     lastView: 'dashboard',
     lastActiveVoucherId: null

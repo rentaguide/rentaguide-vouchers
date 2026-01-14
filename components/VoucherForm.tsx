@@ -2,11 +2,13 @@
 import React, { useState } from 'react';
 import { Voucher } from '../types';
 import { ISRAEL_LOCATIONS } from '../constants';
+import { GoogleGenAI } from "@google/genai";
 
 interface VoucherFormProps {
   voucherNumber: number;
   availableServices: string[];
   availableSuppliers: string[];
+  availableGuides: string[];
   initialData?: Voucher;
   onSubmit: (data: Omit<Voucher, 'id' | 'createdAt'>, isNewService: boolean, isNewSupplier: boolean) => void;
   onCancel: () => void;
@@ -16,12 +18,13 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
   voucherNumber, 
   availableServices, 
   availableSuppliers,
+  availableGuides,
   initialData,
   onSubmit, 
   onCancel 
 }) => {
-  // Merge system-saved suppliers with the static comprehensive Israel locations list
   const allSuppliers = Array.from(new Set([...availableSuppliers, ...ISRAEL_LOCATIONS])).sort();
+  const allGuides = Array.from(new Set(availableGuides)).sort();
 
   const [formData, setFormData] = useState({
     to: initialData?.to || '',
@@ -37,6 +40,7 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
 
   const [customService, setCustomService] = useState('');
   const [isAddingNewService, setIsAddingNewService] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   const isEditing = !!initialData;
 
@@ -63,6 +67,36 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
     }, isAddingNewService, isNewSupplier);
   };
 
+  const handleAiMagic = async () => {
+    if (!formData.to || !formData.serviceType) {
+      alert("Please fill 'TO' and 'Service' fields first so AI knows the context.");
+      return;
+    }
+
+    setIsAiLoading(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: (process.env as any).API_KEY });
+      const prompt = `Generate a short, professional 2-3 sentence itinerary description for a "${formData.serviceType}" at "${formData.to}" in Israel. Focus on professional tone for a travel work order. Include a placeholder for timing if relevant. NO MARKDOWN, JUST TEXT.`;
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt
+      });
+
+      if (response.text) {
+        setFormData(prev => ({
+          ...prev,
+          serviceDescription: response.text.trim()
+        }));
+      }
+    } catch (error) {
+      console.error("AI Generation failed", error);
+      alert("Could not reach AI assistant. Please try again later.");
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
@@ -79,7 +113,7 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
           
           {/* TO (Supplier / Hotel / Site) */}
           <div className="space-y-1 md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700">TO (Supplier / Hotel / Site):</label>
+            <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">TO (Supplier / Hotel / Site):</label>
             <div className="relative">
               <input
                 required
@@ -87,7 +121,7 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
                 type="text"
                 autoComplete="off"
                 placeholder="Type hotel name or site..."
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-semibold"
                 value={formData.to}
                 onChange={(e) => setFormData({ ...formData, to: e.target.value })}
               />
@@ -96,8 +130,8 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
                   <option key={s} value={s} />
                 ))}
               </datalist>
-              <div className="absolute right-3 top-2.5 text-slate-300 pointer-events-none">
-                <i className="fas fa-search text-xs"></i>
+              <div className="absolute right-4 top-3.5 text-slate-300 pointer-events-none">
+                <i className="fas fa-search"></i>
               </div>
             </div>
           </div>
@@ -105,20 +139,20 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
           {/* DATE & TIME Split Row */}
           <div className="grid grid-cols-2 gap-4 md:col-span-2">
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-slate-700">DATE OF SERVICE:</label>
+              <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">DATE OF SERVICE:</label>
               <input
                 required
                 type="date"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={formData.dateOfService}
                 onChange={(e) => setFormData({ ...formData, dateOfService: e.target.value })}
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-slate-700">VISIT TIME:</label>
+              <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">VISIT TIME:</label>
               <input
                 type="time"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={formData.visitTime}
                 onChange={(e) => setFormData({ ...formData, visitTime: e.target.value })}
               />
@@ -127,12 +161,12 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
 
           {/* SERVICE Selection */}
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">SERVICE:</label>
+            <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">SERVICE:</label>
             {!isAddingNewService ? (
               <div className="flex gap-2">
                 <select
                   required
-                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-semibold"
                   value={formData.serviceType}
                   onChange={(e) => {
                     if (e.target.value === 'NEW') {
@@ -156,17 +190,16 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
                   autoFocus
                   type="text"
                   placeholder="Enter new service name"
-                  className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="flex-1 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold"
                   value={customService}
                   onChange={(e) => setCustomService(e.target.value)}
                 />
                 <button
                   type="button"
                   onClick={() => setIsAddingNewService(false)}
-                  className="px-3 text-slate-400 hover:text-slate-600 border border-slate-200 rounded-lg"
-                  title="Select from existing"
+                  className="px-4 text-slate-400 hover:text-slate-600 border border-slate-200 rounded-xl bg-slate-50"
                 >
-                  <i className="fas fa-list"></i>
+                  <i className="fas fa-times"></i>
                 </button>
               </div>
             )}
@@ -174,12 +207,12 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
 
           {/* TOUR NUMBER Field */}
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">TOUR NUMBER:</label>
+            <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">TOUR NUMBER:</label>
             <input
               required
               type="text"
               placeholder="e.g. TLV-2024-001"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               value={formData.tourNumber}
               onChange={(e) => setFormData({ ...formData, tourNumber: e.target.value })}
             />
@@ -187,38 +220,63 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
 
           {/* NUMBER OF TRAVELERS Field */}
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">NUMBER OF TRAVELERS:</label>
+            <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">NUMBER OF TRAVELERS:</label>
             <input
               required
               type="number"
               min="1"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               value={formData.numberOfTravelers}
               onChange={(e) => setFormData({ ...formData, numberOfTravelers: parseInt(e.target.value) })}
             />
           </div>
 
-          {/* GUIDE NAME Field */}
+          {/* GUIDE NAME Field - With persistence memory */}
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">GUIDE NAME:</label>
-            <input
-              required
-              type="text"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              value={formData.guideName}
-              onChange={(e) => setFormData({ ...formData, guideName: e.target.value })}
-            />
+            <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">GUIDE NAME:</label>
+            <div className="relative">
+              <input
+                required
+                list="guides-list"
+                type="text"
+                autoComplete="off"
+                placeholder="Name of the guide..."
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                value={formData.guideName}
+                onChange={(e) => setFormData({ ...formData, guideName: e.target.value })}
+              />
+              <datalist id="guides-list">
+                {allGuides.map(g => (
+                  <option key={g} value={g} />
+                ))}
+              </datalist>
+            </div>
           </div>
         </div>
 
-        {/* SERVICE DESCRIPTION - Optional */}
+        {/* SERVICE DESCRIPTION - Optional with AI Assist */}
         <div className="pt-4 border-t border-slate-100">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">SERVICE DESCRIPTION (Optional):</label>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="block text-sm font-medium text-slate-700 uppercase tracking-wider text-[11px] font-bold">SERVICE DESCRIPTION (Optional):</label>
+              <button
+                type="button"
+                onClick={handleAiMagic}
+                disabled={isAiLoading}
+                className="text-[10px] bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-bold hover:bg-blue-100 transition-colors flex items-center space-x-2 disabled:opacity-50"
+              >
+                {isAiLoading ? (
+                  <i className="fas fa-spinner fa-spin"></i>
+                ) : (
+                  <i className="fas fa-magic"></i>
+                )}
+                <span>AI ASSIST</span>
+              </button>
+            </div>
             <textarea
               rows={4}
               placeholder="Describe the service in detail if needed..."
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all leading-relaxed"
               value={formData.serviceDescription}
               onChange={(e) => setFormData({ ...formData, serviceDescription: e.target.value })}
             ></textarea>
@@ -229,15 +287,16 @@ const VoucherForm: React.FC<VoucherFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-6 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition-colors"
+            className="px-6 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-8 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md hover:shadow-lg transition-all"
+            className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-md hover:shadow-lg transition-all flex items-center space-x-3"
           >
-            {isEditing ? 'Update Voucher' : 'Generate Voucher'}
+            <i className={`fas ${isEditing ? 'fa-save' : 'fa-check-circle'}`}></i>
+            <span>{isEditing ? 'Update Voucher' : 'Generate Voucher'}</span>
           </button>
         </div>
       </form>

@@ -22,6 +22,14 @@ export const DEFAULT_SUPPLIERS = [
   "Israel Guide Association"
 ];
 
+export const DEFAULT_GUIDES = [
+  "Avi Cohen",
+  "Yossi Levi",
+  "Michal Avraham",
+  "Dana Sharon",
+  "Ronit Barak"
+];
+
 export const ISRAEL_LOCATIONS = [
   // Jerusalem
   "Western Wall", "Old City Jerusalem", "Church of the Holy Sepulchre", "Yad Vashem", "Mount of Olives", "Tower of David", "Mahane Yehuda Market", "Israel Museum", "Al-Aqsa Mosque", "City of David",

@@ -1,10 +1,11 @@
 
 import React from 'react';
+import { ViewMode } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
-  activeView: string;
-  onViewChange: (view: 'dashboard' | 'create') => void;
+  activeView: ViewMode;
+  onViewChange: (view: ViewMode) => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) => {
@@ -13,7 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) =
       {/* Sidebar - Hidden on print */}
       <aside className="no-print w-full md:w-64 bg-slate-900 text-white flex-shrink-0">
         <div className="p-6 md:fixed md:w-64 h-full flex flex-col">
-          {/* Updated Sidebar Branding */}
+          {/* Sidebar Branding */}
           <div className="flex flex-col mb-10">
             <h1 className="text-2xl font-black tracking-tight leading-none text-white italic">
               Rent-a-Guide
@@ -26,7 +27,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) =
           <nav className="space-y-2 flex-grow">
             <button
               onClick={() => onViewChange('dashboard')}
-              className={`w-full text-left flex items-center space-x-3 px-4 py-3.5 rounded-xl transition-all pointer-events-auto ${
+              className={`w-full text-left flex items-center space-x-3 px-4 py-3.5 rounded-xl transition-all ${
                 activeView === 'dashboard' ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-400'
               }`}
             >
@@ -35,12 +36,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) =
             </button>
             <button
               onClick={() => onViewChange('create')}
-              className={`w-full text-left flex items-center space-x-3 px-4 py-3.5 rounded-xl transition-all pointer-events-auto ${
-                activeView === 'create' ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-400'
+              className={`w-full text-left flex items-center space-x-3 px-4 py-3.5 rounded-xl transition-all ${
+                activeView === 'create' || activeView === 'edit' ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-400'
               }`}
             >
               <i className="fas fa-plus-circle"></i>
               <span className="font-bold">New Voucher</span>
+            </button>
+            <button
+              onClick={() => onViewChange('manage')}
+              className={`w-full text-left flex items-center space-x-3 px-4 py-3.5 rounded-xl transition-all ${
+                activeView === 'manage' ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-400'
+              }`}
+            >
+              <i className="fas fa-users-cog"></i>
+              <span className="font-bold">Manage Lists</span>
             </button>
           </nav>
 

@@ -13,12 +13,13 @@ export interface Voucher {
   createdAt: string;
 }
 
-export type ViewMode = 'dashboard' | 'create' | 'edit' | 'preview';
+export type ViewMode = 'dashboard' | 'create' | 'edit' | 'preview' | 'manage';
 
 export interface AppState {
   vouchers: Voucher[];
   services: string[];
   suppliers: string[];
+  guides: string[];
   nextVoucherNumber: number;
   // Session persistence fields
   lastView?: ViewMode;
