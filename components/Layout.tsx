@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { ViewMode } from '../types';
+import { supabase } from '../services/supabaseClient';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,6 +10,8 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) => {
+  const isCloud = !!supabase;
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
       {/* Sidebar - Hidden on print */}
@@ -54,12 +57,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) =
             </button>
           </nav>
 
-          {/* Persistence Indicator */}
+          {/* Sync Status Indicator */}
           <div className="mt-auto pt-6 border-t border-slate-800">
-            <div className="flex items-center space-x-2 text-slate-500 text-xs font-medium">
-              <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
-              <span>All changes saved locally</span>
+            <div className="flex items-center space-x-2 text-slate-400 text-[10px] uppercase font-black tracking-widest">
+              <div className={`w-2 h-2 rounded-full ${isCloud ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse' : 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]'}`}></div>
+              <span>{isCloud ? 'Cloud Sync Active' : 'Local Storage Mode'}</span>
             </div>
+            <p className="text-[9px] text-slate-600 mt-1 font-bold">
+              {isCloud ? 'SUPABASE SECURE CONNECTION' : 'NO KEYS FOUND - SAVING LOCALLY'}
+            </p>
           </div>
         </div>
       </aside>

@@ -1,7 +1,15 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Voucher, ViewMode, AppState } from './types';
-import { loadState, saveState } from './services/storageService';
+import { 
+  loadState, 
+  saveVoucher, 
+  deleteVoucherFromDb, 
+  updateListItem, 
+  updateNextVoucherNumber,
+  saveSessionState,
+  loadSessionState
+} from './services/storageService';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import VoucherForm from './components/VoucherForm';
@@ -12,30 +20,40 @@ import ManageLists from './components/ManageLists';
 declare var html2pdf: any;
 
 const App: React.FC = () => {
-  const initialState = useMemo(() => loadState(), []);
-  const [state, setState] = useState<AppState>(initialState);
+  const [state, setState] = useState<AppState | null>(null);
+  const [loading, setLoading] = useState(true);
   
-  // Hydrate view and active voucher from saved state
-  const [view, setView] = useState<ViewMode>(initialState.lastView || 'dashboard');
-  const [activeVoucherId, setActiveVoucherId] = useState<number | null>(initialState.lastActiveVoucherId || null);
+  const [view, setView] = useState<ViewMode>('dashboard');
+  const [activeVoucherId, setActiveVoucherId] = useState<number | null>(null);
   
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('Voucher Saved!');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Sync state to localStorage whenever it changes
   useEffect(() => {
-    saveState({
-      ...state,
-      lastView: view,
-      lastActiveVoucherId: activeVoucherId
-    });
-  }, [state, view, activeVoucherId]);
+    const init = async () => {
+      const data = await loadState();
+      const session = loadSessionState();
+      setState(data);
+      if (session) {
+        setView(session.lastView || 'dashboard');
+        setActiveVoucherId(session.lastActiveVoucherId || null);
+      }
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      saveSessionState(view, activeVoucherId);
+    }
+  }, [view, activeVoucherId, loading]);
 
   const activeVoucher = useMemo(() => {
-    if (!activeVoucherId) return null;
+    if (!activeVoucherId || !state) return null;
     return state.vouchers.find(v => v.id === activeVoucherId) || null;
-  }, [state.vouchers, activeVoucherId]);
+  }, [state, activeVoucherId]);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -43,11 +61,13 @@ const App: React.FC = () => {
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  const handleSubmitVoucher = useCallback((
+  const handleSubmitVoucher = useCallback(async (
     formData: Omit<Voucher, 'id' | 'createdAt'>, 
     isNewService: boolean,
     isNewSupplier: boolean
   ) => {
+    if (!state) return;
+    
     const isEdit = view === 'edit' && activeVoucherId;
     const existingVoucher = isEdit ? state.vouchers.find(v => v.id === activeVoucherId) : null;
     
@@ -55,51 +75,46 @@ const App: React.FC = () => {
       ? { ...existingVoucher, ...formData }
       : { ...formData, id: Date.now(), createdAt: new Date().toISOString() };
 
-    setState(prev => {
-      let updatedServices = prev.services;
-      if (isNewService && !prev.services.includes(formData.serviceType)) {
-        updatedServices = [...prev.services, formData.serviceType].sort();
-      }
-      let updatedSuppliers = prev.suppliers;
-      if (isNewSupplier && !prev.suppliers.includes(formData.to)) {
-        updatedSuppliers = [...prev.suppliers, formData.to].sort();
-      }
-      let updatedGuides = prev.guides || [];
-      if (formData.guideName && !updatedGuides.includes(formData.guideName)) {
-        updatedGuides = [...updatedGuides, formData.guideName].sort();
-      }
+    try {
+      await saveVoucher(voucherToSave, state);
+      if (isNewService) await updateListItem('service', formData.serviceType, 'add', state);
+      if (isNewSupplier) await updateListItem('supplier', formData.to, 'add', state);
+      if (!existingVoucher) await updateNextVoucherNumber(state.nextVoucherNumber + 1, state);
 
-      const isExisting = prev.vouchers.some(v => v.id === voucherToSave.id);
-      const updatedVouchers = isExisting
-        ? prev.vouchers.map(v => v.id === voucherToSave.id ? voucherToSave : v)
-        : [voucherToSave, ...prev.vouchers];
+      setState(prev => {
+        if (!prev) return prev;
+        const isExisting = prev.vouchers.some(v => v.id === voucherToSave.id);
+        const updatedVouchers = isExisting
+          ? prev.vouchers.map(v => v.id === voucherToSave.id ? voucherToSave : v)
+          : [voucherToSave, ...prev.vouchers];
 
-      return {
-        ...prev,
-        vouchers: updatedVouchers,
-        services: updatedServices,
-        suppliers: updatedSuppliers,
-        guides: updatedGuides,
-        nextVoucherNumber: isExisting ? prev.nextVoucherNumber : prev.nextVoucherNumber + 1
-      };
-    });
+        return {
+          ...prev,
+          vouchers: updatedVouchers,
+          services: isNewService ? [...prev.services, formData.serviceType].sort() : prev.services,
+          suppliers: isNewSupplier ? [...prev.suppliers, formData.to].sort() : prev.suppliers,
+          nextVoucherNumber: isExisting ? prev.nextVoucherNumber : prev.nextVoucherNumber + 1
+        };
+      });
 
-    setActiveVoucherId(voucherToSave.id);
-    setView('preview');
-    triggerToast(existingVoucher ? 'Voucher Updated!' : 'Voucher Generated!');
-  }, [view, activeVoucherId, state.vouchers]);
+      setActiveVoucherId(voucherToSave.id);
+      setView('preview');
+      triggerToast(existingVoucher ? 'Voucher Updated!' : 'Voucher Generated!');
+    } catch (err) {
+      console.error("Save failed", err);
+    }
+  }, [view, activeVoucherId, state]);
 
-  const handleDeleteVoucher = (id: number) => {
-    if (confirm("Are you sure you want to delete this voucher? This action cannot be undone.")) {
-      setState(prev => ({
-        ...prev,
-        vouchers: prev.vouchers.filter(v => v.id !== id)
-      }));
+  const handleDeleteVoucher = async (id: number) => {
+    if (state && confirm("Are you sure you want to delete this voucher?")) {
+      await deleteVoucherFromDb(id, state);
+      setState(prev => prev ? ({ ...prev, vouchers: prev.vouchers.filter(v => v.id !== id) }) : prev);
       triggerToast('Voucher Deleted');
     }
   };
 
-  const handleDuplicateVoucher = (voucher: Voucher) => {
+  const handleDuplicateVoucher = async (voucher: Voucher) => {
+    if (!state) return;
     const newVoucher: Voucher = {
       ...voucher,
       id: Date.now(),
@@ -108,98 +123,71 @@ const App: React.FC = () => {
       dateOfService: new Date().toISOString().split('T')[0]
     };
 
-    setState(prev => ({
+    await saveVoucher(newVoucher, state);
+    await updateNextVoucherNumber(state.nextVoucherNumber + 1, state);
+    
+    setState(prev => prev ? ({
       ...prev,
       vouchers: [newVoucher, ...prev.vouchers],
       nextVoucherNumber: prev.nextVoucherNumber + 1
-    }));
+    }) : prev);
 
     setActiveVoucherId(newVoucher.id);
     setView('edit');
     triggerToast('Voucher Duplicated');
   };
 
-  const handleDeleteGuide = (name: string) => {
-    setState(prev => ({ ...prev, guides: prev.guides.filter(g => g !== name) }));
-    triggerToast('Guide Removed');
-  };
-
-  const handleDeleteSupplier = (name: string) => {
-    setState(prev => ({ ...prev, suppliers: prev.suppliers.filter(s => s !== name) }));
-    triggerToast('Supplier Removed');
-  };
-
-  const handleDeleteService = (name: string) => {
-    setState(prev => ({ ...prev, services: prev.services.filter(s => s !== name) }));
-    triggerToast('Service Removed');
-  };
-
-  const handleAddItem = (type: 'guides' | 'suppliers' | 'services', name: string) => {
+  const handleListItemAction = async (type: 'guides' | 'suppliers' | 'services', action: 'add' | 'delete' | 'update', name: string, oldName?: string) => {
+    if (!state) return;
+    const dbType = type === 'guides' ? 'guide' : type === 'suppliers' ? 'supplier' : 'service';
+    await updateListItem(dbType, name, action, state, oldName);
     setState(prev => {
-      const list = prev[type] || [];
-      if (list.includes(name)) return prev;
-      return { ...prev, [type]: [...list, name].sort() };
+      if (!prev) return prev;
+      let newList = [...prev[type]];
+      if (action === 'add') newList = [...newList, name].sort();
+      if (action === 'delete') newList = newList.filter(i => i !== name);
+      if (action === 'update' && oldName) newList = newList.map(i => i === oldName ? name : i).sort();
+      return { ...prev, [type]: newList };
     });
-    triggerToast('Item Added');
-  };
-
-  const handleEditItem = (type: 'guides' | 'suppliers' | 'services', oldName: string, newName: string) => {
-    setState(prev => {
-      const list = prev[type] || [];
-      return {
-        ...prev,
-        [type]: list.map(item => item === oldName ? newName : item).sort()
-      };
-    });
-    triggerToast('Item Updated');
+    triggerToast('List Updated');
   };
 
   const handlePrint = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!activeVoucher || isGenerating) return;
-
     setIsGenerating(true);
     const element = document.getElementById('voucher-document');
-    if (!element) {
-      setIsGenerating(false);
-      return;
-    }
-
-    const opt = {
-      margin:       0,
-      filename:     `Voucher_${activeVoucher.voucherNumber}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    try {
+    if (element) {
+      const opt = {
+        margin: 0,
+        filename: `Voucher_${activeVoucher.voucherNumber}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
       await html2pdf().set(opt).from(element).save();
-    } catch (error) {
-      console.error("PDF Generation failed", error);
-      alert("Could not generate PDF. Please try again.");
-    } finally {
-      setIsGenerating(false);
     }
+    setIsGenerating(false);
   };
 
-  const navigateToDashboard = () => {
-    setActiveVoucherId(null);
-    setView('dashboard');
-  };
+  if (loading || !state) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 border-4 border-blue-600 border-t-white rounded-full animate-spin mb-8"></div>
+        <h2 className="text-white text-3xl font-black mb-2 tracking-tight">Syncing System...</h2>
+      </div>
+    );
+  }
 
   return (
     <Layout activeView={view} onViewChange={(v) => {
-      if (v === 'dashboard') navigateToDashboard();
-      if (v === 'create') { setActiveVoucherId(null); setView('create'); }
-      if (v === 'manage') setView('manage');
+      if (v === 'dashboard') { setActiveVoucherId(null); setView('dashboard'); }
+      else if (v === 'create') { setActiveVoucherId(null); setView('create'); }
+      else setView(v);
     }}>
       {showToast && (
-        <div className="fixed top-6 right-6 z-[9999] bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3 border-2 border-white/20 animate-bounce">
-          <i className="fas fa-check-circle text-2xl"></i>
-          <div>
-            <p className="font-bold">{toastMessage}</p>
-          </div>
+        <div className="fixed top-6 right-6 z-[9999] bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl animate-bounce">
+          <p className="font-bold">{toastMessage}</p>
         </div>
       )}
 
@@ -222,7 +210,7 @@ const App: React.FC = () => {
           availableGuides={state.guides || []}
           initialData={view === 'edit' ? activeVoucher || undefined : undefined}
           onSubmit={handleSubmitVoucher}
-          onCancel={navigateToDashboard}
+          onCancel={() => setView('dashboard')}
         />
       )}
 
@@ -231,53 +219,28 @@ const App: React.FC = () => {
           guides={state.guides}
           suppliers={state.suppliers}
           services={state.services}
-          onDeleteGuide={handleDeleteGuide}
-          onDeleteSupplier={handleDeleteSupplier}
-          onDeleteService={handleDeleteService}
-          onAddItem={handleAddItem}
-          onEditItem={handleEditItem}
+          onDeleteGuide={(n) => handleListItemAction('guides', 'delete', n)}
+          onDeleteSupplier={(n) => handleListItemAction('suppliers', 'delete', n)}
+          onDeleteService={(n) => handleListItemAction('services', 'delete', n)}
+          onAddItem={(t, n) => handleListItemAction(t, 'add', n)}
+          onEditItem={(t, o, n) => handleListItemAction(t, 'update', n, o)}
         />
       )}
 
       {view === 'preview' && activeVoucher && (
         <div className="max-w-[850px] mx-auto space-y-6 pb-20 relative">
           <div className="no-print sticky top-4 z-[9999] flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-slate-200 shadow-2xl">
-            <button 
-              onClick={(e) => { e.preventDefault(); navigateToDashboard(); }}
-              className="flex items-center space-x-2 text-slate-600 hover:text-blue-600 font-bold px-4 py-2 bg-slate-50 rounded-xl transition-all"
-            >
+            <button onClick={() => setView('dashboard')} className="flex items-center space-x-2 text-slate-600 font-bold px-4 py-2 bg-slate-50 rounded-xl">
               <i className="fas fa-arrow-left"></i>
               <span>Back</span>
             </button>
-            
             <div className="flex items-center space-x-3">
-              <button 
-                onClick={(e) => { e.preventDefault(); setView('edit'); }}
-                disabled={isGenerating}
-                className="px-6 py-2 bg-white text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-all border border-slate-200 shadow-sm disabled:opacity-50"
-              >
-                Edit
-              </button>
-              <button 
-                onClick={handlePrint} 
-                disabled={isGenerating}
-                className={`bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-xl font-black flex items-center justify-center space-x-3 shadow-lg transition-all min-w-[200px] ${isGenerating ? 'opacity-70 cursor-wait' : ''}`}
-              >
-                {isGenerating ? (
-                  <>
-                    <i className="fas fa-circle-notch fa-spin"></i>
-                    <span>GENERATING...</span>
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-download text-xl"></i>
-                    <span>DOWNLOAD PDF</span>
-                  </>
-                )}
+              <button onClick={() => setView('edit')} className="px-6 py-2 bg-white text-slate-700 rounded-xl font-bold border border-slate-200">Edit</button>
+              <button onClick={handlePrint} disabled={isGenerating} className="bg-blue-600 text-white px-8 py-2 rounded-xl font-black shadow-lg">
+                {isGenerating ? 'GEN...' : 'DOWNLOAD PDF'}
               </button>
             </div>
           </div>
-          
           <div className="bg-slate-200 p-1 md:p-8 rounded-3xl shadow-inner border border-slate-300">
              <VoucherPrintout voucher={activeVoucher} />
           </div>
