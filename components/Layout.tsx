@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ViewMode } from '../types';
 import { supabase } from '../services/supabaseClient';
 
@@ -10,7 +10,24 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) => {
-  const isCloud = !!supabase;
+  const [connectionValid, setConnectionValid] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (!supabase) {
+        setConnectionValid(false);
+        return;
+      }
+      try {
+        // Simple health check against the config table to see if we can actually reach the data
+        const { error } = await supabase.from('app_config').select('key').limit(1);
+        setConnectionValid(!error);
+      } catch {
+        setConnectionValid(false);
+      }
+    };
+    checkConnection();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
@@ -60,11 +77,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) =
           {/* Sync Status Indicator */}
           <div className="mt-auto pt-6 border-t border-slate-800">
             <div className="flex items-center space-x-2 text-slate-400 text-[10px] uppercase font-black tracking-widest">
-              <div className={`w-2 h-2 rounded-full ${isCloud ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse' : 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]'}`}></div>
-              <span>{isCloud ? 'Cloud Sync Active' : 'Local Storage Mode'}</span>
+              <div className={`w-2 h-2 rounded-full ${
+                connectionValid === true ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : 
+                connectionValid === false ? 'bg-red-500 animate-pulse' : 
+                'bg-slate-500'
+              }`}></div>
+              <span>
+                {connectionValid === true ? 'Cloud Sync Active' : 
+                 connectionValid === false ? 'Connection Error' : 
+                 'Connecting...'}
+              </span>
             </div>
             <p className="text-[9px] text-slate-600 mt-1 font-bold">
-              {isCloud ? 'SUPABASE SECURE CONNECTION' : 'NO KEYS FOUND - SAVING LOCALLY'}
+              {connectionValid === true ? 'SUPABASE SECURE CONNECTION' : 
+               connectionValid === false ? 'PLEASE CHECK API KEYS' : 
+               'VERIFYING CLOUD STATUS'}
             </p>
           </div>
         </div>
