@@ -5,54 +5,112 @@ import { supabase } from './supabaseClient';
 
 const LOCAL_STORAGE_KEY = 'rent_a_guide_full_state';
 
+// --- COLUMN MAPPING HELPERS ---
+// Postgres stores columns in lowercase (e.g., vouchernumber).
+// Our App uses camelCase (e.g., voucherNumber).
+// We must translate between them to avoid 400 errors.
+
+const mapVoucherFromDb = (dbVoucher: any): Voucher => ({
+  id: dbVoucher.id,
+  voucherNumber: dbVoucher.vouchernumber,
+  to: dbVoucher.to,
+  serviceType: dbVoucher.servicetype,
+  dateOfService: dbVoucher.dateofservice,
+  visitTime: dbVoucher.visittime,
+  tourNumber: dbVoucher.tournumber,
+  numberOfTravelers: dbVoucher.numberoftravelers,
+  serviceDescription: dbVoucher.servicedescription,
+  guideName: dbVoucher.guidename,
+  createdAt: dbVoucher.createdat || new Date().toISOString()
+});
+
+const mapVoucherToDb = (appVoucher: Voucher) => ({
+  id: appVoucher.id,
+  vouchernumber: appVoucher.voucherNumber,
+  to: appVoucher.to,
+  servicetype: appVoucher.serviceType,
+  dateofservice: appVoucher.dateOfService,
+  visittime: appVoucher.visitTime,
+  tournumber: appVoucher.tourNumber,
+  numberoftravelers: appVoucher.numberOfTravelers,
+  servicedescription: appVoucher.serviceDescription,
+  guidename: appVoucher.guideName,
+  createdat: appVoucher.createdAt
+});
+
 export const loadState = async (): Promise<AppState> => {
-  // Try Cloud First
+  let cloudData: Partial<AppState> | null = null;
+  let usedCloud = false;
+
+  // 1. Try Loading from Cloud (Supabase)
   if (supabase) {
     try {
       // Fetch vouchers
       const { data: vouchersData, error: vError } = await supabase
         .from('vouchers')
         .select('*')
-        .order('voucherNumber', { ascending: false });
+        .order('vouchernumber', { ascending: false }); // Note: order by DB column name
+
+      if (vError) throw vError;
 
       // Fetch lists
       const { data: listsData, error: lError } = await supabase
         .from('app_lists')
         .select('*');
+        
+      if (lError) throw lError;
 
       // Fetch sequence config
       const { data: configData, error: cError } = await supabase
         .from('app_config')
         .select('*')
         .eq('key', 'next_voucher_number')
-        .maybeSingle(); // maybeSingle doesn't throw if not found
+        .maybeSingle();
 
-      if (!vError && !lError) {
-        return {
-          vouchers: (vouchersData as Voucher[]) || [],
-          services: listsData?.filter(i => i.type === 'service').map(i => i.name).sort() || DEFAULT_SERVICES,
-          suppliers: listsData?.filter(i => i.type === 'supplier').map(i => i.name).sort() || DEFAULT_SUPPLIERS,
-          guides: listsData?.filter(i => i.type === 'guide').map(i => i.name).sort() || DEFAULT_GUIDES,
-          nextVoucherNumber: configData?.value || INITIAL_VOUCHER_NUMBER,
-          lastView: 'dashboard',
-          lastActiveVoucherId: null
-        };
-      }
+      // Map DB snake_case/lowercase to App camelCase
+      const mappedVouchers = (vouchersData || []).map(mapVoucherFromDb);
+
+      // If we got here, requests succeeded
+      cloudData = {
+        vouchers: mappedVouchers,
+        services: listsData?.filter(i => i.type === 'service').map(i => i.name).sort() || DEFAULT_SERVICES,
+        suppliers: listsData?.filter(i => i.type === 'supplier').map(i => i.name).sort() || DEFAULT_SUPPLIERS,
+        guides: listsData?.filter(i => i.type === 'guide').map(i => i.name).sort() || DEFAULT_GUIDES,
+        nextVoucherNumber: configData?.value || INITIAL_VOUCHER_NUMBER,
+        lastView: 'dashboard',
+        lastActiveVoucherId: null
+      };
+      usedCloud = true;
+      console.log("Data loaded successfully from Supabase Cloud.");
     } catch (error) {
-      console.warn("Supabase query failed. Ensure tables are created in Supabase SQL editor.", error);
+      console.warn("Supabase load failed (using local storage instead):", error);
+      usedCloud = false;
     }
   }
 
-  // Fallback to Local Storage
-  const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-  if (saved) {
+  // 2. Load from Local Storage (Fallback or primary if cloud failed)
+  const localSaved = localStorage.getItem(LOCAL_STORAGE_KEY);
+  let localData: AppState | null = null;
+  
+  if (localSaved) {
     try {
-      return JSON.parse(saved);
+      localData = JSON.parse(localSaved);
     } catch (e) {
       console.error("Failed to parse local storage data", e);
     }
   }
 
+  // 3. Decision Strategy
+  if (usedCloud && cloudData) {
+    return cloudData as AppState;
+  }
+
+  if (localData) {
+    console.log("Data loaded from Local Storage.");
+    return localData;
+  }
+
+  console.log("No data found. Initializing defaults.");
   return {
     vouchers: [],
     services: DEFAULT_SERVICES,
@@ -65,20 +123,31 @@ export const loadState = async (): Promise<AppState> => {
 };
 
 const persistLocally = (state: AppState) => {
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error("Local storage save failed", e);
+  }
 };
 
 export const saveVoucher = async (voucher: Voucher, currentState: AppState) => {
+  // 1. Save to Cloud
   if (supabase) {
     try {
-      const { error } = await supabase.from('vouchers').upsert(voucher);
-      if (error) throw error;
+      // Convert to DB format (lowercase keys)
+      const dbPayload = mapVoucherToDb(voucher);
+      const { error } = await supabase.from('vouchers').upsert(dbPayload);
+      if (error) {
+        console.error("Cloud save error:", error);
+      } else {
+        console.log("Voucher saved to Cloud successfully");
+      }
     } catch (e) {
-      console.error("Cloud save failed", e);
+      console.error("Cloud save exception:", e);
     }
   }
   
-  // Always update local for offline resilience
+  // 2. Update Local State & Storage
   const updatedVouchers = currentState.vouchers.some(v => v.id === voucher.id)
     ? currentState.vouchers.map(v => v.id === voucher.id ? voucher : v)
     : [voucher, ...currentState.vouchers];
