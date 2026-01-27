@@ -15,8 +15,9 @@ const mapVoucherFromDb = (dbVoucher: any): Voucher => ({
   voucherNumber: dbVoucher.vouchernumber,
   to: dbVoucher.to,
   serviceType: dbVoucher.servicetype,
-  dateOfService: dbVoucher.dateofservice,
-  visitTime: dbVoucher.visittime,
+  // Convert NULLs back to empty strings for React inputs
+  dateOfService: dbVoucher.dateofservice || '',
+  visitTime: dbVoucher.visittime || '',
   tourNumber: dbVoucher.tournumber,
   numberOfTravelers: dbVoucher.numberoftravelers,
   serviceDescription: dbVoucher.servicedescription,
@@ -29,8 +30,9 @@ const mapVoucherToDb = (appVoucher: Voucher) => ({
   vouchernumber: appVoucher.voucherNumber,
   to: appVoucher.to,
   servicetype: appVoucher.serviceType,
-  dateofservice: appVoucher.dateOfService,
-  visittime: appVoucher.visitTime,
+  // CRITICAL FIX: Send null instead of empty string "" for Date/Time columns to prevent 400 Errors
+  dateofservice: appVoucher.dateOfService ? appVoucher.dateOfService : null,
+  visittime: appVoucher.visitTime ? appVoucher.visitTime : null,
   tournumber: appVoucher.tourNumber,
   numberoftravelers: appVoucher.numberOfTravelers,
   servicedescription: appVoucher.serviceDescription,
@@ -49,7 +51,7 @@ export const loadState = async (): Promise<AppState> => {
       const { data: vouchersData, error: vError } = await supabase
         .from('vouchers')
         .select('*')
-        .order('vouchernumber', { ascending: false }); // Note: order by DB column name
+        .order('vouchernumber', { ascending: false });
 
       if (vError) throw vError;
 
@@ -134,8 +136,10 @@ export const saveVoucher = async (voucher: Voucher, currentState: AppState) => {
   // 1. Save to Cloud
   if (supabase) {
     try {
-      // Convert to DB format (lowercase keys)
+      // Convert to DB format (lowercase keys, null dates)
       const dbPayload = mapVoucherToDb(voucher);
+      console.log("Attempting to save voucher to cloud:", dbPayload);
+      
       const { error } = await supabase.from('vouchers').upsert(dbPayload);
       if (error) {
         console.error("Cloud save error:", error);
